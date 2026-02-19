@@ -11,10 +11,14 @@ app.post("/", async (req, res) => {
   try {
     const SHEET_ID = process.env.SHEET_ID;
     const SHEET_TAB = process.env.SHEET_TAB || "Main";
-    const KEYFILE = process.env.GOOGLE_APPLICATION_CREDENTIALS; // /secrets/sa.json
 
-    if (!SHEET_ID || !KEYFILE) {
-      console.log("Missing env vars");
+    // ✅ CHANGE #1: remove KEYFILE and use these env vars instead
+    const CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
+    const PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+
+    // ✅ CHANGE #2: update env var check
+    if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
+      console.log("Missing env vars: SHEET_ID / GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY");
       return res.status(500).send("Missing env vars");
     }
 
@@ -33,12 +37,13 @@ app.post("/", async (req, res) => {
 
     if (!docket) return res.status(200).send("No docket_number");
 
-    // Auth
-    const auth = new google.auth.GoogleAuth({
-  keyFile: KEYFILE,
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-});
-const sheets = google.sheets({ version: "v4", auth });
+    // ✅ CHANGE #3: Auth using JWT (same style as Delhivery)
+    const auth = new google.auth.JWT({
+      email: CLIENT_EMAIL,
+      key: PRIVATE_KEY,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    const sheets = google.sheets({ version: "v4", auth });
 
     // Find docket in Column A
     const colA = await sheets.spreadsheets.values.get({
@@ -76,28 +81,17 @@ const sheets = google.sheets({ version: "v4", auth });
     const sheetRow = rowIndex + 1; // 1-based row number
 
     // Update B..K as per your headers
-    // A Docket Number
-    // B Destination Pincode
-    // C Destination Location
-    // D Status
-    // E Booking Date
-    // F Expected Delivery Date
-    // G Delivery Date / Attempted Date
-    // H Arrival Date
-    // I Packets
-    // J Weight
-    // K POD Copy link
     const values = [[
-      pincode,        // B
-      location,       // C
-      status,         // D
-      bookingDate,    // E
+      pincode,         // B
+      location,        // C
+      status,          // D
+      bookingDate,     // E
       expectedDelivery,// F
-      deliveryDate,   // G
-      arrivalDate,    // H
-      packets,        // I
-      weight,         // J
-      podLink         // K
+      deliveryDate,    // G
+      arrivalDate,     // H
+      packets,         // I
+      weight,          // J
+      podLink          // K
     ]];
 
     await sheets.spreadsheets.values.update({
@@ -110,6 +104,7 @@ const sheets = google.sheets({ version: "v4", auth });
     return res.status(200).send("Updated");
   } catch (err) {
     console.error(err);
+    // keep 500 for now so we can see errors while testing
     return res.status(500).send("Error");
   }
 });
