@@ -9,6 +9,14 @@ app.get("/", (req, res) => res.status(200).send("OK - TCI webhook is live"));
 
 app.post("/", async (req, res) => {
   try {
+    // Secret validation (TCI)
+const expectedSecret = process.env.TCI_SECRET || "";
+const receivedSecret = (req.headers["x-tci-secret"] || "").toString();
+
+if (expectedSecret && receivedSecret !== expectedSecret) {
+  console.log("Unauthorized request - bad secret");
+  return res.status(401).send("Unauthorized");
+}
     const SHEET_ID = process.env.SHEET_ID;
     const SHEET_TAB = process.env.SHEET_TAB || "Main";
 
