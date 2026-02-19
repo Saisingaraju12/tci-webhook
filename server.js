@@ -3,6 +3,7 @@ const { google } = require("googleapis");
 
 const app = express();
 app.use(express.json());
+app.get("/", (req, res) => res.status(200).send("OK - TCI webhook is live"));
 
 const SHEET_ID = process.env.SHEET_ID;
 const SHEET_NAME = "Main";
