@@ -11,10 +11,9 @@ app.post("/", async (req, res) => {
   try {
     const SHEET_ID = process.env.SHEET_ID;
     const SHEET_TAB = process.env.SHEET_TAB || "Main";
-    const CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
-    const PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+    const KEYFILE = process.env.GOOGLE_APPLICATION_CREDENTIALS; // /secrets/sa.json
 
-    if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
+    if (!SHEET_ID || !KEYFILE) {
       console.log("Missing env vars");
       return res.status(500).send("Missing env vars");
     }
@@ -35,12 +34,11 @@ app.post("/", async (req, res) => {
     if (!docket) return res.status(200).send("No docket_number");
 
     // Auth
-    const auth = new google.auth.JWT({
-      email: CLIENT_EMAIL,
-      key: PRIVATE_KEY,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    const sheets = google.sheets({ version: "v4", auth });
+    const auth = new google.auth.GoogleAuth({
+  keyFile: KEYFILE,
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+});
+const sheets = google.sheets({ version: "v4", auth });
 
     // Find docket in Column A
     const colA = await sheets.spreadsheets.values.get({
